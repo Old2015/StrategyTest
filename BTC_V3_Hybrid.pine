@@ -62,9 +62,36 @@ canLong    = longSignal and maFilter and adxFilter and atrFilter
 var float prvEntryPrice = na
 var int   entryBar      = na
 
+// линии отображения сделки
+var line entryLine = na
+var line tpLine    = na
+var line stopLine  = na
+var line layer2Line = na
+var line layer3Line = na
+var line layer4Line = na
+
 if strategy.position_size == 0
     prvEntryPrice := na
     entryBar := na
+    // удаляем линии предыдущей сделки
+    if not na(entryLine)
+        line.delete(entryLine)
+        entryLine := na
+    if not na(tpLine)
+        line.delete(tpLine)
+        tpLine := na
+    if not na(stopLine)
+        line.delete(stopLine)
+        stopLine := na
+    if not na(layer2Line)
+        line.delete(layer2Line)
+        layer2Line := na
+    if not na(layer3Line)
+        line.delete(layer3Line)
+        layer3Line := na
+    if not na(layer4Line)
+        line.delete(layer4Line)
+        layer4Line := na
 
 // Первый вход
 if canLong
@@ -74,6 +101,22 @@ if canLong
 if strategy.position_size > 0 and strategy.opentrades == 1 and na(prvEntryPrice)
     prvEntryPrice := strategy.position_avg_price
     entryBar := bar_index
+    // создаем линии для текущей сделки
+    entryLine := line.new(bar_index, prvEntryPrice, bar_index, prvEntryPrice,
+        extend=extend.right, color=color.blue, width=2)
+    tpPrice = prvEntryPrice * (1 + deferTP / 100)
+    tpLine := line.new(bar_index, tpPrice, bar_index, tpPrice,
+        extend=extend.right, color=color.green, width=2)
+    // линии уровней усреднения
+    layer2Line := line.new(bar_index, prvEntryPrice * (1 - layer2 / 100),
+        bar_index, prvEntryPrice * (1 - layer2 / 100), extend=extend.right,
+        color=color.yellow, style=line.style_dotted)
+    layer3Line := line.new(bar_index, prvEntryPrice * (1 - layer3 / 100),
+        bar_index, prvEntryPrice * (1 - layer3 / 100), extend=extend.right,
+        color=color.yellow, style=line.style_dotted)
+    layer4Line := line.new(bar_index, prvEntryPrice * (1 - layer4 / 100),
+        bar_index, prvEntryPrice * (1 - layer4 / 100), extend=extend.right,
+        color=color.yellow, style=line.style_dotted)
 
 // === Пирамидинг (усреднение при падении цены)
 if strategy.position_size > 0 and not na(prvEntryPrice)
@@ -87,6 +130,12 @@ if strategy.position_size > 0 and not na(prvEntryPrice)
 
 // === Вычисление прибыли позиции
 posProfitPerc = strategy.position_size != 0 ? (close - strategy.position_avg_price) / strategy.position_avg_price * 100 : 0.0
+
+// обновляем линию тейка в соответствии со средней ценой позиции
+if strategy.position_size > 0 and not na(tpLine)
+    curTP = strategy.position_avg_price * (1 + deferTP / 100)
+    line.set_y1(tpLine, curTP)
+    line.set_y2(tpLine, curTP)
 
 // Индикатор выхода: возврат RSI к среднему
 exitSig = ta.crossover(rsi, 50)
@@ -109,6 +158,9 @@ if strategy.position_size > 0
 if strategy.position_size > 0 and posProfitPerc >= beTrigger
     be = strategy.position_avg_price
     strategy.exit("BE", "Long1", stop = be)
+    if na(stopLine)
+        stopLine := line.new(bar_index, be, bar_index, be,
+            extend=extend.right, color=color.red, width=2)
 
 // === Лейблы с итоговой прибылью и длительностью сделки
 var int lastCloseBar = na
