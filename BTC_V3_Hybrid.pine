@@ -1,4 +1,4 @@
-//@version=5
+//@version=6
 strategy("BTC V3 Hybrid", overlay=true, default_qty_type=strategy.percent_of_equity,
      pyramiding=4, default_qty_value=25,
      commission_type=strategy.commission.percent, commission_value=0.07)
@@ -18,6 +18,19 @@ atrMinPerc  = input.float(0.3, "Мин. ATR%", step = 0.1,
                      tooltip = "Пропускать сигналы, когда волатильность слишком низкая")
 useATR      = input.bool(true, "Включить ATR-фильтр?")
 
+// === ADX calculation replacement for missing ta.adx ===
+f_adx(len) =>
+    upMove   = high - high[1]
+    downMove = low[1] - low
+    plusDM   = upMove > downMove and upMove > 0 ? upMove : 0
+    minusDM  = downMove > upMove and downMove > 0 ? downMove : 0
+    tr       = math.max(math.max(high - low, math.abs(high - close[1])), math.abs(low - close[1]))
+    atr      = ta.rma(tr, len)
+    plusDI   = 100 * ta.rma(plusDM, len) / atr
+    minusDI  = 100 * ta.rma(minusDM, len) / atr
+    dx       = 100 * math.abs(plusDI - minusDI) / (plusDI + minusDI)
+    ta.rma(dx, len)
+
 // === Параметры усреднения
 layer2 = input.float(1.5, "2-й слой (% ниже входа)")
 layer3 = input.float(3.0, "3-й слой (% ниже входа)")
@@ -33,7 +46,7 @@ showLabel = input.bool(true, "Show PnL/Dur?")
 // === Расчёт индикаторов
 rsi  = ta.rsi(close, rsiLen)
 ma   = ta.sma(close,  maLen)
-adx  = ta.adx(adxLen)
+adx  = f_adx(adxLen)
 atrP = ta.atr(atrLen) / close * 100  // ATR (%) от цены
 
 // === Фильтры
