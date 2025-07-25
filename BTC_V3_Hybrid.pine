@@ -1,0 +1,110 @@
+//@version=5
+strategy("BTC V3 Hybrid", overlay=true, default_qty_type=strategy.percent_of_equity,
+    pyramiding=4, default_qty_value=25,
+    commission_type=strategy.commission.percent, commission_value=0.07)
+
+// === Параметры индикаторов
+rsiLen      = input.int(14,  "RSI Length")
+rsiLow      = input.int(30,  "RSI Oversold")
+maLen       = input.int(100, "MA Length")
+useMAFilter = input.bool(false, "Require price < MA for entry?")
+
+adxLen      = input.int(14,  "ADX Length")
+adxMax      = input.int(40,  "Макс. ADX для входа", tooltip = "Не входить, если ADX выше порога (сильный тренд)")
+useADX      = input.bool(true, "Включить фильтр ADX?")
+
+atrLen      = input.int(14,  "ATR Length")
+atrMinPerc  = input.float(0.3, "Мин. ATR%", step = 0.1,
+                    tooltip = "Пропускать сигналы, когда волатильность слишком низкая")
+useATR      = input.bool(true, "Включить ATR-фильтр?")
+
+// === Параметры усреднения
+layer2 = input.float(1.5, "2-й слой (% ниже входа)")
+layer3 = input.float(3.0, "3-й слой (% ниже входа)")
+layer4 = input.float(4.5, "4-й слой (% ниже входа)")
+
+// === Настройки выходов и риска
+minProfit = input.float(0.1, "Min profit for immediate exit (%)")
+deferTP   = input.float(2.0, "Deferred TP (%) if unmet")
+maxBars   = input.int(1800, "Макс. баров удержания (≈2 суток на M15)")
+beTrigger = input.float(0.6, "BE trigger (%)")
+showLabel = input.bool(true, "Show PnL/Dur?")
+
+// === Расчёт индикаторов
+rsi  = ta.rsi(close, rsiLen)
+ma   = ta.sma(close,  maLen)
+adx  = ta.adx(adxLen)
+atrP = ta.atr(atrLen) / close * 100  // ATR (%) от цены
+
+// === Фильтры
+maFilter  = not useMAFilter or close < ma
+adxFilter = not useADX      or adx <= adxMax
+atrFilter = not useATR      or atrP >= atrMinPerc
+
+// === Сигналы входа (long-only)
+longSignal = ta.crossover(rsi, rsiLow)
+canLong    = longSignal and maFilter and adxFilter and atrFilter
+
+// Храним цену первого входа и бар
+var float prvEntryPrice = na
+var int   entryBar      = na
+
+if strategy.position_size == 0
+    prvEntryPrice := na
+    entryBar := na
+
+// Первый вход
+if canLong
+    strategy.entry("Long1", strategy.long)
+
+// Сохраняем цену первого входа
+if strategy.position_size > 0 and strategy.opentrades == 1 and na(prvEntryPrice)
+    prvEntryPrice := strategy.position_avg_price
+    entryBar := bar_index
+
+// === Пирамидинг (усреднение при падении цены)
+if strategy.position_size > 0 and not na(prvEntryPrice)
+    dropP = (prvEntryPrice - close) / prvEntryPrice * 100
+    if dropP >= layer2 and strategy.opentrades == 1
+        strategy.entry("Long2", strategy.long)
+    if dropP >= layer3 and strategy.opentrades == 2
+        strategy.entry("Long3", strategy.long)
+    if dropP >= layer4 and strategy.opentrades == 3
+        strategy.entry("Long4", strategy.long)
+
+// === Вычисление прибыли позиции
+posProfitPerc = strategy.position_size != 0 ? (close - strategy.position_avg_price) / strategy.position_avg_price * 100 : 0.0
+
+// Индикатор выхода: возврат RSI к среднему
+exitSig = ta.crossover(rsi, 50)
+
+// === Логика выхода
+if strategy.position_size > 0 and exitSig
+    if posProfitPerc >= minProfit
+        strategy.close("Long1")
+    else
+        tpPrice = strategy.position_avg_price * (1 + deferTP / 100)
+        strategy.exit("DeferredTP", "Long1", limit = tpPrice)
+
+// === Fail-safe по времени или противоположному сигналу
+failSig = ta.crossunder(rsi, rsiLow)
+if strategy.position_size > 0
+    if bar_index - entryBar > maxBars or failSig
+        strategy.close("Long1")
+
+// === Перевод стопа в безубыток
+if strategy.position_size > 0 and posProfitPerc >= beTrigger
+    be = strategy.position_avg_price
+    strategy.exit("BE", "Long1", stop = be)
+
+// === Лейблы с итоговой прибылью и длительностью сделки
+var int lastCloseBar = na
+if showLabel and strategy.position_size == 0 and not na(entryBar) and (na(lastCloseBar) or lastCloseBar != bar_index)
+    tradePnL = (close - prvEntryPrice) / prvEntryPrice * 100
+    durBars  = bar_index - entryBar
+    label.new(bar_index, close, yloc = yloc.abovebar, style=label.style_label_down,
+        color = tradePnL >= 0 ? color.green : color.red,
+        text = "P/L " + str.tostring(tradePnL, format.percent) + "\nBars " + str.tostring(durBars))
+    lastCloseBar := bar_index
+
+// Рекомендации по адаптации под 1m/3m: увеличить maxBars для удержания (например, в 3-5 раз)
