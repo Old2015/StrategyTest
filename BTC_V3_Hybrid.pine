@@ -18,7 +18,7 @@ atrMinPerc  = input.float(0.3, "Мин. ATR%", step = 0.1,
                      tooltip = "Пропускать сигналы, когда волатильность слишком низкая")
 useATR      = input.bool(true, "Включить ATR-фильтр?")
 
-// === ADX calculation replacement for missing ta.adx ===
+//  === ADX calculation replacement for missing ta.adx ===
 f_adx(len) =>
     upMove   = high - high[1]
     downMove = low[1] - low
