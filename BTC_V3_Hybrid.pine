@@ -18,7 +18,7 @@ atrMinPerc  = input.float(0.3, "Мин. ATR%", step = 0.1,
                      tooltip = "Пропускать сигналы, когда волатильность слишком низкая")
 useATR      = input.bool(true, "Включить ATR-фильтр?")
 
-//  === ADX calculation replacement for missing ta.adx ===
+// === ADX calculation replacement for missing ta.adx ===
 f_adx(len) =>
     upMove   = high - high[1]
     downMove = low[1] - low
@@ -82,20 +82,20 @@ if strategy.position_size > 0 and strategy.opentrades == 1 and not tradeActive
     tradeActive := true
     // создаем линии для текущей сделки
     entryLine := line.new(bar_index, prvEntryPrice, bar_index, prvEntryPrice,
-        color=color.blue, width=2)
+         color=color.blue, width=2)
     tpPrice = prvEntryPrice * (1 + deferTP / 100)
     tpLine := line.new(bar_index, tpPrice, bar_index, tpPrice,
-        color=color.green, width=2)
+         color=color.green, width=2)
     // линии уровней усреднения
     layer2Line := line.new(bar_index, prvEntryPrice * (1 - layer2 / 100),
-        bar_index, prvEntryPrice * (1 - layer2 / 100),
-        color=color.yellow, style=line.style_dotted)
+         bar_index, prvEntryPrice * (1 - layer2 / 100),
+         color=color.yellow, style=line.style_dotted)
     layer3Line := line.new(bar_index, prvEntryPrice * (1 - layer3 / 100),
-        bar_index, prvEntryPrice * (1 - layer3 / 100),
-        color=color.yellow, style=line.style_dotted)
+         bar_index, prvEntryPrice * (1 - layer3 / 100),
+         color=color.yellow, style=line.style_dotted)
     layer4Line := line.new(bar_index, prvEntryPrice * (1 - layer4 / 100),
-        bar_index, prvEntryPrice * (1 - layer4 / 100),
-        color=color.yellow, style=line.style_dotted)
+         bar_index, prvEntryPrice * (1 - layer4 / 100),
+         color=color.yellow, style=line.style_dotted)
 
 // === Пирамидинг (усреднение при падении цены)
 if strategy.position_size > 0 and not na(prvEntryPrice)
@@ -146,7 +146,7 @@ if strategy.position_size > 0 and posProfitPerc >= beTrigger
     strategy.exit("BE", "Long1", stop = be)
     if na(stopLine)
         stopLine := line.new(entryBar, be, bar_index, be,
-            color=color.red, width=2)
+             color=color.red, width=2)
     else
         line.set_y1(stopLine, be)
         line.set_y2(stopLine, be)
