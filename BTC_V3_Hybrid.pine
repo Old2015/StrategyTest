@@ -1,7 +1,7 @@
 //@version=5
 strategy("BTC V3 Hybrid", overlay=true, default_qty_type=strategy.percent_of_equity,
-    pyramiding=4, default_qty_value=25,
-    commission_type=strategy.commission.percent, commission_value=0.07)
+     pyramiding=4, default_qty_value=25,
+     commission_type=strategy.commission.percent, commission_value=0.07)
 
 // === Параметры индикаторов
 rsiLen      = input.int(14,  "RSI Length")
@@ -15,7 +15,7 @@ useADX      = input.bool(true, "Включить фильтр ADX?")
 
 atrLen      = input.int(14,  "ATR Length")
 atrMinPerc  = input.float(0.3, "Мин. ATR%", step = 0.1,
-                    tooltip = "Пропускать сигналы, когда волатильность слишком низкая")
+                     tooltip = "Пропускать сигналы, когда волатильность слишком низкая")
 useATR      = input.bool(true, "Включить ATR-фильтр?")
 
 // === Параметры усреднения
@@ -103,8 +103,8 @@ if showLabel and strategy.position_size == 0 and not na(entryBar) and (na(lastCl
     tradePnL = (close - prvEntryPrice) / prvEntryPrice * 100
     durBars  = bar_index - entryBar
     label.new(bar_index, close, yloc = yloc.abovebar, style=label.style_label_down,
-        color = tradePnL >= 0 ? color.green : color.red,
-        text = "P/L " + str.tostring(tradePnL, format.percent) + "\nBars " + str.tostring(durBars))
+         color = tradePnL >= 0 ? color.green : color.red,
+         text = "P/L " + str.tostring(tradePnL, format.percent) + "\nBars " + str.tostring(durBars))
     lastCloseBar := bar_index
 
 // Рекомендации по адаптации под 1m/3m: увеличить maxBars для удержания (например, в 3-5 раз)
